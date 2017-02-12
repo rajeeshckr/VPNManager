@@ -4,6 +4,11 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 
 import android.app.ActivityManager;
+import android.app.Application;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.app.Activity;
 import android.view.KeyEvent;
@@ -16,8 +21,15 @@ import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.logging.Handler;
+
+import static android.widget.Toast.*;
 
 public class MainActivity extends Activity {
     // Remove the below line after defining your own ad unit ID.
@@ -25,13 +37,14 @@ public class MainActivity extends Activity {
             + "To show live ads, replace the ad unit ID in res/values/strings.xml with your own ad unit ID.";
 
     private String _selectedProcess;
-    private Integer currentPosition;
+    private Integer _currentPosition;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        currentPosition = null;
+        _currentPosition = null;
+        _selectedProcess = null;
 
         // Load an ad into the AdMob banner view.
         AdView adView = (AdView) findViewById(R.id.adView);
@@ -44,31 +57,49 @@ public class MainActivity extends Activity {
                 android.R.layout.simple_spinner_item, getListOfProcess());
         spinner.setAdapter(adapter);
         spinner.setOnItemSelectedListener(spinnerOnItemSelected);
-        spinner.setOnItemClickListener(spinnerOnItemClicked);
 
+        startTimer();
     }
 
     public void onClickBtn(View v)
     {
-        Toast.makeText(this, "Clicked on Button", Toast.LENGTH_LONG).show();
+        Button button = (Button) v;
+        button.setEnabled(false);
     }
 
-    private AdapterView.OnItemClickListener spinnerOnItemClicked = new AdapterView.OnItemClickListener() {
 
-        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-            changeButtonState(position);
-            currentPosition = position;
-        }
+    public void startTimer() {
+        Timer timer = new Timer();
+        TimerTask timerTask = initializeTimerTask();
+        timer.schedule(timerTask, 1000, 600000); //
+    }
 
-        public void onNothingSelected(AdapterView<?> parent) {
-        }
-    };
+
+    public TimerTask initializeTimerTask() {
+        TimerTask task = new TimerTask() {
+            public void run() {
+                if(_selectedProcess != null){
+                    ConnectivityManager cm = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+                    Network[] networks = cm.getAllNetworks();
+                    for(int i = 0; i < networks.length; i++) {
+                        NetworkCapabilities caps = cm.getNetworkCapabilities(networks[i]);
+                        NetworkCapabilities caps2 = cm.getNetworkCapabilities(networks[i]);
+//                        Log.i(TAG, "Network " + i + ": " + networks[i].toString());
+//                        Log.i(TAG, "VPN transport is: " + caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN));
+//                        Log.i(TAG, "NOT_VPN capability is: " + caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN));
+
+                    }
+                }
+            }
+        };
+        return  task;
+    }
 
     private AdapterView.OnItemSelectedListener spinnerOnItemSelected = new AdapterView.OnItemSelectedListener() {
         public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
             Object item = parent.getItemAtPosition(position);
             changeButtonState(position);
-            currentPosition = position;
+            _currentPosition = position;
             _selectedProcess = item.toString();
         }
 
@@ -78,7 +109,8 @@ public class MainActivity extends Activity {
 
     private void changeButtonState(int position) {
         Button button = (Button) findViewById(R.id.monitor);
-        if(currentPosition != position){
+        if(_currentPosition == null
+                || _currentPosition != position){
             button.setClickable(true);
         }
         else{
@@ -95,6 +127,7 @@ public class MainActivity extends Activity {
 
     private String[] getListOfProcess() {
         ActivityManager actvityManager = (ActivityManager)this.getSystemService( ACTIVITY_SERVICE );
+
         ArrayList<String> processList = new ArrayList<String>();
         List<ActivityManager.RunningAppProcessInfo> procInfos = actvityManager.getRunningAppProcesses();
         for(ActivityManager.RunningAppProcessInfo runningProInfo:procInfos){
@@ -102,6 +135,14 @@ public class MainActivity extends Activity {
                 processList.add(runningProInfo.processName);
             }
         }
+        if(processList.isEmpty()){
+            processList.add("torrent");
+            processList.add("torrent1");
+            processList.add("torrent2");
+            processList.add("torrent3");
+            processList.add("torrent4");
+        }
+
         return processList.toArray(new String[0]);
     }
 
