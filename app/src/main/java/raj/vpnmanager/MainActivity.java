@@ -29,6 +29,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Handler;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
 import static android.widget.Toast.*;
 
 public class MainActivity extends Activity {
@@ -80,14 +81,15 @@ public class MainActivity extends Activity {
             public void run() {
                 if(_selectedProcess != null){
                     ConnectivityManager cm = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+                    Boolean hasVpn = false;
                     Network[] networks = cm.getAllNetworks();
-                    for(int i = 0; i < networks.length; i++) {
-                        NetworkCapabilities caps = cm.getNetworkCapabilities(networks[i]);
-                        NetworkCapabilities caps2 = cm.getNetworkCapabilities(networks[i]);
-//                        Log.i(TAG, "Network " + i + ": " + networks[i].toString());
-//                        Log.i(TAG, "VPN transport is: " + caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN));
-//                        Log.i(TAG, "NOT_VPN capability is: " + caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN));
-
+                    for (Network network : networks) {
+                        NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+                        if(!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                                &&  caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)){
+                            hasVpn = true;
+                            break;
+                        }
                     }
                 }
             }
