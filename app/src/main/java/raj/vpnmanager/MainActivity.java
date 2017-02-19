@@ -4,13 +4,15 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 
 import android.app.ActivityManager;
-import android.app.Application;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.app.Activity;
+import android.support.annotation.NonNull;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,18 +21,17 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
-import android.widget.Toast;
+import android.widget.SpinnerAdapter;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.logging.Handler;
-
-import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
-import static android.widget.Toast.*;
 
 public class MainActivity extends Activity {
     // Remove the below line after defining your own ad unit ID.
@@ -39,6 +40,7 @@ public class MainActivity extends Activity {
 
     private String _selectedProcess;
     private Integer _currentPosition;
+    private  Map<String, String> _processPackageMap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +48,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         _currentPosition = null;
         _selectedProcess = null;
+        _processPackageMap = new HashMap<String, String>();
 
         // Load an ad into the AdMob banner view.
         AdView adView = (AdView) findViewById(R.id.adView);
@@ -57,6 +60,8 @@ public class MainActivity extends Activity {
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, getListOfProcess());
         spinner.setAdapter(adapter);
+
+        spinner.setOnItemClickListener(spinnerOnItemClicked);
         spinner.setOnItemSelectedListener(spinnerOnItemSelected);
 
         startTimer();
@@ -64,15 +69,15 @@ public class MainActivity extends Activity {
 
     public void onClickBtn(View v)
     {
-        Button button = (Button) v;
-        button.setEnabled(false);
+        Spinner spinner = (Spinner) findViewById(R.id.spinner);
+        _selectedProcess = spinner.getSelectedItem().toString();
+        changeButtonState(spinner.getSelectedItemPosition());
     }
 
-
     public void startTimer() {
-        Timer timer = new Timer();
-        TimerTask timerTask = initializeTimerTask();
-        timer.schedule(timerTask, 1000, 600000); //
+        Timer vpnTimer = new Timer();
+        TimerTask vpnTimerTask = initializeTimerTask();
+        vpnTimer.schedule(vpnTimerTask, 1000, 10000);
     }
 
 
@@ -91,10 +96,21 @@ public class MainActivity extends Activity {
                             break;
                         }
                     }
+
+                    if(!hasVpn){
+                        killSelectedProcess();
+                    }
+
                 }
             }
         };
         return  task;
+    }
+
+    private  void killSelectedProcess()
+    {
+        ActivityManager am = (ActivityManager) getSystemService(Activity.ACTIVITY_SERVICE);
+        am.killBackgroundProcesses(_processPackageMap.get(_selectedProcess));
     }
 
     private AdapterView.OnItemSelectedListener spinnerOnItemSelected = new AdapterView.OnItemSelectedListener() {
@@ -102,12 +118,23 @@ public class MainActivity extends Activity {
             Object item = parent.getItemAtPosition(position);
             changeButtonState(position);
             _currentPosition = position;
-            _selectedProcess = item.toString();
         }
 
         public void onNothingSelected(AdapterView<?> parent) {
         }
     };
+
+    private AdapterView.OnItemClickListener spinnerOnItemClicked = new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+          /*  ArrayAdapter<String> adapter = new ArrayAdapter<String>(parent.getContext(),
+                    android.R.layout.simple_spinner_item, getListOfProcess());
+            parent.setAdapter(?);
+            parent.setAdapter(adapter);
+            adapter.notifyDataSetChanged();*/
+        }
+    };
+
 
     private void changeButtonState(int position) {
         Button button = (Button) findViewById(R.id.monitor);
@@ -128,24 +155,32 @@ public class MainActivity extends Activity {
     };
 
     private String[] getListOfProcess() {
-        ActivityManager actvityManager = (ActivityManager)this.getSystemService( ACTIVITY_SERVICE );
+        _processPackageMap.clear();
+        ArrayList<String> applications = new ArrayList<String>();
+        // Flags: See below
+        PackageManager pm = getPackageManager();
+        List<ApplicationInfo> apps = pm.getInstalledApplications(0);
 
-        ArrayList<String> processList = new ArrayList<String>();
-        List<ActivityManager.RunningAppProcessInfo> procInfos = actvityManager.getRunningAppProcesses();
-        for(ActivityManager.RunningAppProcessInfo runningProInfo:procInfos){
-            if(!runningProInfo.processName.toLowerCase().contains("vpnmanager")){
-                processList.add(runningProInfo.processName);
+        List<ApplicationInfo> installedApps = new ArrayList<ApplicationInfo>();
+
+        for(ApplicationInfo app : apps) {
+            //checks for flags; if flagged, check if updated system app
+            if((app.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0) {
+                applications.add(app.processName);
+                _processPackageMap.put(app.processName, app.packageName);
+                //it's a system app, not interested
+            } else if ((app.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
+                //Discard this one
+                //in this case, it should be a user-installed app
+            } else {
+                applications.add(app.processName);
+                _processPackageMap.put(app.processName, app.packageName);
             }
         }
-        if(processList.isEmpty()){
-            processList.add("torrent");
-            processList.add("torrent1");
-            processList.add("torrent2");
-            processList.add("torrent3");
-            processList.add("torrent4");
-        }
 
-        return processList.toArray(new String[0]);
+        String[] mStringArray = new String[applications.size()];
+        mStringArray = applications.toArray(mStringArray);
+        return  mStringArray;
     }
 
 
