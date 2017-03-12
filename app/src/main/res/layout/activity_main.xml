@@ -3,7 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="raj.vpnmanager.MainActivity">
+    tools:context="raj.vpnmanager.MainActivity"
+    android:backgroundTint="@color/common_google_signin_btn_text_dark_disabled"
+    android:background="@color/common_google_signin_btn_text_dark_disabled">
 
     <!-- view for AdMob Banner Ad -->
 
@@ -17,26 +19,37 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true" />
 
-    <Spinner
-        android:layout_width="match_parent"
+    <Button
+        android:text="Stop monitor"
         android:layout_height="wrap_content"
-        android:id="@+id/spinner"
-        android:layout_marginBottom="94dp"
-        android:gravity="center|start|end"
-        android:layout_above="@+id/adView"
-        android:layout_alignParentStart="true" />
+        android:id="@+id/stopmonitor"
+        android:layout_width="wrap_content"
+        android:elevation="24dp"
+        android:layout_alignBaseline="@+id/monitor"
+        android:layout_alignBottom="@+id/monitor"
+        android:layout_alignParentEnd="true"
+        android:background="@color/colorAccent"
+        style="@style/Widget.AppCompat.Button.Small"
+        android:onClick="onClickBtnStopMonitor"
+        android:visibility="visible" />
 
     <Button
         android:text="Monitor"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="24dp"
         android:id="@+id/monitor"
-        android:layout_above="@+id/adView"
-        android:layout_alignParentEnd="true"
-        android:layout_marginBottom="22dp"
-        android:elevation="10dp"
+        android:layout_marginBottom="28dp"
+        android:elevation="24dp"
         android:visibility="visible"
-        android:onClick="onClickBtn" />
+        android:onClick="onClickBtnMonitor"
+        android:layout_above="@+id/adView"
+        android:layout_alignParentStart="true"
+        android:background="@color/colorPrimary"
+        style="@style/Widget.AppCompat.Button" />
+
+    <ImageSwitcher
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentTop="true" />
 
 </RelativeLayout>
